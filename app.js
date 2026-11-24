@@ -340,6 +340,72 @@
     renderSymptoms();
   });
 
+  /* ---------------- Sample data (button only — never auto-loaded) ---------------- */
+  // Loads 2 sample medicines (start date 14 days ago), a 14-day dose log
+  // and 4 sample symptom entries, all through the same core functions the
+  // real forms use (addMedicine / markDose / addSymptom). Deterministic
+  // pattern, same shape as tests/eval.js: the earliest doses are marked
+  // taken, then missed, then skipped. Reversible via "Delete all my data".
+  function loadSampleData() {
+    if (state.medicines.some((m) => m.name.indexOf('(sample)') !== -1)) {
+      $('sample-status').textContent = 'Sample data is already loaded.';
+      return;
+    }
+    if ((state.medicines.length || state.symptoms.length) &&
+      !confirm('Load sample data alongside your existing medicines and symptoms?')) return;
+
+    const today = D.todayStr();
+    const start = D.addDays(today, -14);
+    const sampleMeds = [];
+    const medDefs = [
+      { name: 'Paracetamol (sample)', dose: '500 mg', times: ['08:00', '20:00'], startDate: start, notes: 'Sample medicine — for demo only' },
+      { name: 'Amlodipine (sample)', dose: '5 mg', times: ['09:00'], startDate: start, notes: 'Sample medicine — for demo only' },
+    ];
+    for (const def of medDefs) {
+      const res = D.addMedicine(state.medicines, def);
+      if (res.errors.length > 0) { alert('Could not load sample data: ' + res.errors.join(' ')); return; }
+      state.medicines = res.list;
+      sampleMeds.push(res.medicine);
+    }
+
+    // 14-day dose log: 14 days x 3 doses/day = 42 scheduled.
+    // First 38 taken, next 3 missed, last 1 skipped (today stays pending
+    // so the judge can mark today's doses themselves).
+    const logDays = D.dateRange(start, D.addDays(today, -1));
+    let allKeys = [];
+    for (const day of logDays) {
+      for (const med of sampleMeds) {
+        for (const d of D.dosesForDay(med, day)) allKeys.push(d.key);
+      }
+    }
+    const knownKeys = new Set(allKeys);
+    allKeys.forEach((key, i) => {
+      const status = i < 38 ? 'taken' : i < 41 ? 'missed' : 'skipped';
+      state.doseLog = D.markDose(state.doseLog, key, status, knownKeys).log;
+    });
+
+    // Sample symptoms across 4 different days so the trend chart renders.
+    const symptomDefs = [
+      { name: 'Headache', severity: 5, date: D.addDays(today, -13), note: 'Sample entry' },
+      { name: 'Headache', severity: 4, date: D.addDays(today, -9), note: 'Sample entry' },
+      { name: 'Headache', severity: 6, date: D.addDays(today, -5), note: 'Sample entry' },
+      { name: 'Headache', severity: 3, date: D.addDays(today, -2), note: 'Sample entry' },
+    ];
+    for (const def of symptomDefs) {
+      const res = D.addSymptom(state.symptoms, def);
+      if (res.errors.length > 0) { alert('Could not load sample data: ' + res.errors.join(' ')); return; }
+      state.symptoms = res.log;
+    }
+
+    save();
+    viewDate = today;
+    renderAll();
+    $('sample-status').textContent =
+      'Sample data loaded — 2 sample medicines, 42 logged doses over the last 14 days (38 taken, 3 missed, 1 skipped) and 4 sample symptom entries. Delete it any time with “Delete all my data”.';
+  }
+
+  $('btn-sample').addEventListener('click', loadSampleData);
+
   /* ---------------- Summary & export ---------------- */
   function summaryRange() {
     return { start: $('sum-start').value, end: $('sum-end').value };
@@ -374,6 +440,7 @@
     state = { medicines: [], doseLog: {}, symptoms: [] };
     try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
     viewDate = D.todayStr();
+    $('sample-status').textContent = '';
     resetMedicineForm();
     renderAll();
   });
