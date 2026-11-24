@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DawaDiary — Medicine reminders &amp; symptom journal</title>
+<meta name="description" content="A free, private medicine reminder and symptom journal. Your data never leaves your device. Not medical advice — it does not diagnose anything.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">✚</span>
+    <div>
+      <h1>DawaDiary</h1>
+      <p class="tagline">Medicine reminders &amp; a symptom journal — private, on your device.</p>
+    </div>
+  </div>
+  <p class="disclaimer" role="note"><strong>Not medical advice.</strong> DawaDiary reminds you about medicines you already take and keeps a journal of what you log. It does <strong>not diagnose</strong> anything, predict risk, or tell you what medicine to take. Always talk to a doctor.</p>
+</header>
+
+<nav class="tabs" aria-label="Sections">
+  <button type="button" class="tab active" data-tab="today" aria-current="page">Today</button>
+  <button type="button" class="tab" data-tab="medicines">Medicines</button>
+  <button type="button" class="tab" data-tab="symptoms">Symptoms</button>
+  <button type="button" class="tab" data-tab="summary">Summary &amp; export</button>
+  <button type="button" class="tab" data-tab="about">About &amp; evaluation</button>
+</nav>
+
+<main>
+  <!-- ============ TODAY ============ -->
+  <section id="tab-today" class="panel" aria-labelledby="today-heading">
+    <h2 id="today-heading">Today's doses — <span id="today-date"></span></h2>
+    <p class="disclaimer small" role="note">Reminder only. If a dose time has passed and you are unsure what to do, ask a doctor or pharmacist — do not guess from this app.</p>
+    <div class="stat-row" id="today-stats" aria-live="polite"></div>
+    <div class="date-nav">
+      <button type="button" id="prev-day" class="btn secondary">← Previous day</button>
+      <button type="button" id="today-btn" class="btn secondary">Back to today</button>
+      <button type="button" id="next-day" class="btn secondary">Next day →</button>
+    </div>
+    <ul id="schedule-list" class="dose-list"></ul>
+    <p id="schedule-empty" class="empty">No medicines scheduled for this day yet. Add one under <strong>Medicines</strong>.</p>
+  </section>
+
+  <!-- ============ MEDICINES ============ -->
+  <section id="tab-medicines" class="panel hidden" aria-labelledby="medicines-heading">
+    <h2 id="medicines-heading">Your medicines</h2>
+    <p class="disclaimer small" role="note">Only add medicines a doctor or pharmacist has already prescribed or recommended to you. This app never suggests a medicine or a dose.</p>
+    <form id="medicine-form" class="card" novalidate>
+      <h3 id="medicine-form-title">Add a medicine</h3>
+      <input type="hidden" id="med-id" value="">
+      <label>Medicine name
+        <input type="text" id="med-name" maxlength="100" placeholder="e.g. Paracetamol" required>
+      </label>
+      <label>Dose
+        <input type="text" id="med-dose" maxlength="60" placeholder="e.g. 500 mg or 1 tablet" required>
+      </label>
+      <label>Times per day <span class="hint">(pick one or more)</span>
+        <span class="time-picks" id="med-times"></span>
+      </label>
+      <label>Start date
+        <input type="date" id="med-start" required>
+      </label>
+      <label>Notes <span class="hint">(optional — e.g. "after food")</span>
+        <input type="text" id="med-notes" maxlength="500" placeholder="e.g. after food">
+      </label>
+      <p class="form-error" id="med-error" role="alert" hidden></p>
+      <div class="form-actions">
+        <button type="submit" class="btn primary" id="med-submit">Add medicine</button>
+        <button type="button" class="btn secondary" id="med-cancel" hidden>Cancel edit</button>
+      </div>
+    </form>
+    <ul id="medicine-list" class="med-list"></ul>
+    <p id="medicine-empty" class="empty">No medicines yet.</p>
+  </section>
+
+  <!-- ============ SYMPTOMS ============ -->
+  <section id="tab-symptoms" class="panel hidden" aria-labelledby="symptoms-heading">
+    <h2 id="symptoms-heading">Symptom journal</h2>
+    <p class="disclaimer small" role="note">A journal is not a diagnosis. Logging a symptom here does not tell you what it means. If a symptom is severe, sudden, or worries you, seek medical care promptly.</p>
+    <form id="symptom-form" class="card" novalidate>
+      <h3>Log a symptom</h3>
+      <label>Symptom
+        <input type="text" id="sym-name" maxlength="80" placeholder="e.g. Headache" required>
+      </label>
+      <label>Severity (0 = none, 10 = worst)
+        <input type="range" id="sym-severity" min="0" max="10" step="1" value="5">
+        <span class="range-value" id="sym-severity-value">5 / 10</span>
+      </label>
+      <label>Date
+        <input type="date" id="sym-date" required>
+      </label>
+      <label>Note <span class="hint">(optional)</span>
+        <input type="text" id="sym-note" maxlength="500" placeholder="e.g. started after lunch">
+      </label>
+      <p class="form-error" id="sym-error" role="alert" hidden></p>
+      <button type="submit" class="btn primary">Save entry</button>
+    </form>
+
+    <h3>Trend — daily mean severity, last 14 days</h3>
+    <p class="hint">A plain average of what <em>you</em> logged, with a least-squares trend line. It describes your log; it does not predict anything about your health.</p>
+    <div id="trend-box" class="card">
+      <svg id="trend-chart" viewBox="0 0 560 220" role="img" aria-label="Bar chart of daily mean symptom severity"></svg>
+      <p id="trend-text" class="trend-text"></p>
+    </div>
+
+    <h3>Recent entries</h3>
+    <ul id="symptom-list" class="sym-list"></ul>
+    <p id="symptom-empty" class="empty">No symptom entries yet.</p>
+  </section>
+
+  <!-- ============ SUMMARY ============ -->
+  <section id="tab-summary" class="panel hidden" aria-labelledby="summary-heading">
+    <h2 id="summary-heading">Summary for a doctor visit</h2>
+    <p class="disclaimer small" role="note">This summary lists what you logged. It is not a medical report and not a diagnosis — it is a starting point for a conversation with a doctor.</p>
+    <div class="card">
+      <label>Period
+        <span class="inline-fields">
+          <input type="date" id="sum-start" aria-label="Summary start date">
+          <span>to</span>
+          <input type="date" id="sum-end" aria-label="Summary end date">
+        </span>
+      </label>
+      <div class="stat-row" id="summary-stats"></div>
+      <pre id="summary-text" class="summary-text" aria-live="polite"></pre>
+      <div class="form-actions">
+        <button type="button" class="btn primary" id="btn-print">Print summary</button>
+        <button type="button" class="btn secondary" id="btn-csv-meds">Download medicines (CSV)</button>
+        <button type="button" class="btn secondary" id="btn-csv-doses">Download dose log (CSV)</button>
+        <button type="button" class="btn secondary" id="btn-csv-symptoms">Download symptoms (CSV)</button>
+      </div>
+    </div>
+    <div class="card danger-zone">
+      <h3>Your data stays here</h3>
+      <p>Everything is stored only in this browser (localStorage). There is no account, no server, and nothing is uploaded anywhere. Clearing this browser's site data deletes your log.</p>
+      <button type="button" class="btn danger" id="btn-wipe">Delete all my data on this device</button>
+    </div>
+  </section>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="tab-about" class="panel hidden" aria-labelledby="about-heading">
+    <h2 id="about-heading">About &amp; how it was evaluated</h2>
+    <p class="disclaimer" role="note"><strong>Not medical advice.</strong> DawaDiary does not diagnose, predict risk, detect disease, or recommend treatment. Talk to a doctor.</p>
+    <h3>What it does</h3>
+    <ul class="bullets">
+      <li>Reminds you about medicines you already take, at the times you set.</li>
+      <li>Records taken / missed / skipped doses and shows adherence as taken ÷ scheduled — two ways, so pending doses are never silently dropped (see Evaluation).</li>
+      <li>Keeps a daily symptom journal (severity 0–10) and draws the daily mean with a least-squares trend line — descriptive statistics of your own log, nothing more.</li>
+      <li>Exports a plain-text summary and CSV files you can print or show a doctor.</li>
+      <li>No account, no server, no tracking. Data lives in your browser's localStorage.</li>
+    </ul>
+    <h3>What it does not do</h3>
+    <ul class="bullets">
+      <li>No diagnosis, no risk prediction, no disease detection, no dose advice.</li>
+      <li>No reminders when the browser is closed — this is a web page, not a phone alarm. Set a phone alarm for doses that must not be missed.</li>
+      <li>No medical accuracy claims of any kind.</li>
+    </ul>
+    <h3>Evaluation (honest, reproducible)</h3>
+    <p>Full method and results: <a href="EVALUATION.md">EVALUATION.md</a> in the repository. In short:</p>
+    <ul class="bullets">
+      <li><strong>Metric 1 — schedule &amp; adherence arithmetic:</strong> on a scripted 14-day synthetic dataset (2 medicines × 2 doses/day = 56 scheduled doses, 50 marked taken), the app's adherence matched the hand-computed value exactly (89.3%).</li>
+      <li><strong>Metric 2 — trend recovery:</strong> on synthetic symptom data rising exactly 0.5 severity points per day, the least-squares slope recovered was 0.50 points/day.</li>
+      <li><strong>Metric 3 — unit tests:</strong> 20 unit tests, 20 scripted evaluation checks, and 12 Playwright UI smoke checks — all passing, including bad-input cases (empty names, invalid times, severity outside 0–10, unknown dose keys).</li>
+      <li><strong>Where it stops being useful:</strong> the numbers are only as honest as the log. Missed entries, wrong times, or logging after the fact all bias adherence upward or downward; the app cannot detect that. The trend line needs at least 2 days with entries and says nothing about cause.</li>
+    </ul>
+    <h3>Who benefits, who could be harmed</h3>
+    <p><strong>Benefits:</strong> people who take regular medicines and want a simple, private record to show a doctor — especially where a clinic visit is short and a clear log saves time.</p>
+    <p><strong>Could be harmed if:</strong> someone treats the journal or the trend line as a diagnosis, delays seeing a doctor because "the app says nothing is wrong" (it never says that), or relies on a browser tab instead of a real alarm for a time-critical dose. The disclaimer on every screen and the absence of any diagnostic wording are the mitigations; they do not remove the risk.</p>
+    <h3>Built with</h3>
+    <p>Plain HTML, CSS, and JavaScript. No framework, no build step, no external requests, no analytics. Core logic is a dependency-free module (<code>core.js</code>) tested in Node.</p>
+  </section>
+</main>
+
+<footer>
+  <p class="disclaimer" role="note"><strong>Not medical advice.</strong> DawaDiary does not diagnose anything. Talk to a doctor.</p>
+  <p>DawaDiary — free &amp; open source (MIT). Your data never leaves this device. Built by Mohd Raja (devilking7x) for the AI for Medicine student hackathon.</p>
+</footer>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
